@@ -294,6 +294,22 @@ GO
 
 - If you see something other than 'Running.' please follow the [Microsoft docs](https://docs.microsoft.com/en-us/sql/ssms/agent/start-stop-or-pause-the-sql-server-agent-service?view=sql-server-ver15) to start the service.
 
+### Troubleshooting CDC
+
+#### "CDC is not available for the following table(s)"
+
+Starting in version 4.4.9, the connector validates that the database user has CDC access to every table configured for incremental sync before reading change data. If any table is missing CDC access, the sync fails with an error listing the affected tables:
+
+> CDC is not available for the following table(s): schema.table. This usually means CDC is not enabled on the table, or the user lacks access.
+
+To resolve this error:
+
+1. Verify that CDC is enabled on each listed table using `sys.sp_cdc_enable_table` (see [step 1 above](#1-enable-cdc-on-database-and-tables)).
+2. Verify that the Airbyte database user is a member of the gating role specified in the `@role_name` parameter when CDC was enabled on the table (see [step 3 above](#3-create-a-user-and-grant-appropriate-permissions)).
+3. After fixing permissions, refresh the source schema in Airbyte to resume syncing.
+
+This validation prevents a subtle failure mode where missing permissions on any CDC-enabled table in the database caused the connector to read an invalid zero LSN, leading to confusing sync errors unrelated to the actual permissions problem.
+
 ## Connection to MSSQL via an SSH Tunnel
 
 Airbyte has the ability to connect to a MSSQL instance via an SSH Tunnel. The reason you might want
@@ -473,12 +489,12 @@ If you use Airbyte Cloud and your organization restricts access to specific IPs,
 
 | Version     | Date       | Pull Request                                                                                                      | Subject                                                                                                                                                                               |
 |:------------|:-----------|:------------------------------------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 4.4.9       | 2026-05-11 | [77998](https://github.com/airbytehq/airbyte/pull/77998)                                                          | Validate CDC access per configured stream to prevent zero-LSN errors caused by missing permissions.                                      |
-| 4.4.8       | 2026-05-25 | [78415](https://github.com/airbytehq/airbyte/pull/78415)                                                          | Classify Azure read-replica error 3947 as transient so affected syncs retry instead of failing..                                                                                      |
+| 4.4.9       | 2026-06-02 | [77998](https://github.com/airbytehq/airbyte/pull/77998)                                                          | Validate CDC access per configured stream to prevent zero-LSN errors caused by missing permissions.                                      |
+| 4.4.8       | 2026-05-26 | [78415](https://github.com/airbytehq/airbyte/pull/78415)                                                          | Classify Azure read-replica error 3947 as transient so affected syncs retry instead of failing.                                                                                       |
 | 4.4.7       | 2026-05-12 | [78033](https://github.com/airbytehq/airbyte/pull/78033)                                                          | Re-release the Java connector base image revert after the 4.4.6 publish failure.                                                                                                      |
 | 4.4.6       | 2026-05-07 | [77856](https://github.com/airbytehq/airbyte/pull/77856)                                                          | Revert the Java connector base image to resolve connection issues and remove registry rollback overrides.                                                                             |
 | 4.4.5       | 2026-05-07 | [77843](https://github.com/airbytehq/airbyte/pull/77843)                                                          | Roll back source mssql to 4.4.3 to investigate a potential connection issue.                                                                                                          |
-| 4.4.4       | 2026-05-01 | [77665](https://github.com/airbytehq/airbyte/pull/77665)                                                          | Fix sampling sync failure on empty tables in Full Refresh mode (NULL upper bound).                                                                                                    |
+| 4.4.4       | 2026-05-07 | [77665](https://github.com/airbytehq/airbyte/pull/77665)                                                          | Fix sampling sync failure on empty tables in Full Refresh mode (NULL upper bound).                                                                                                    |
 | 4.4.3       | 2026-05-05 | [77786](https://github.com/airbytehq/airbyte/pull/77786)                                                          | Make the hidden additional properties fields in spec optional. No functional change.                                                                                                  |
 | 4.4.2       | 2026-04-27 | [77036](https://github.com/airbytehq/airbyte/pull/77036)                                                          | Fix `TABLESAMPLE` failure on views and tables without an ordered column in cursor-incremental syncs.                                                                                  |
 | 4.4.1       | 2026-04-23 | [76857](https://github.com/airbytehq/airbyte/pull/76857)                                                          | Fix `Invalid column name` error when sampling system-versioned temporal tables that have `HIDDEN` period columns.                                                                     |
